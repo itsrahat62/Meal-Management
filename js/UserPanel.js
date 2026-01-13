@@ -32,14 +32,24 @@ function UserPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule,
             setPendingPreference(pref);
             setShowLockNotice(true);
         } else {
-            setUsers(users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pref } : u));
+            const updatedUsers = users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pref } : u);
+            setUsers(updatedUsers);
+            const updatedUser = updatedUsers.find(u => u.id === currentUser.id);
+            if (updatedUser) {
+                setCurrentUser(updatedUser);
+            }
         }
     };
 
     // লক নোটিশ কনফার্ম করলে পছন্দ সেভ হবে
     const confirmPreferenceChange = () => {
         if (pendingPreference) {
-            setUsers(users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pendingPreference } : u));
+            const updatedUsers = users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pendingPreference } : u);
+            setUsers(updatedUsers);
+            const updatedUser = updatedUsers.find(u => u.id === currentUser.id);
+            if (updatedUser) {
+                setCurrentUser(updatedUser);
+            }
         }
         setShowLockNotice(false);
         setPendingPreference(null);
