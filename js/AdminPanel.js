@@ -28,7 +28,7 @@ function AdminPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule
     // মিল স্ট্যাটিস্টিক্স গণনা
     const getMealStats = () => {
         const dayStatus = mealStatus[today] || {};
-        let totalOn = 0, totalOff = 0, fishEaters = 0, eggInstead = 0;
+        let totalOn = 0, totalOff = 0, fishEaters = 0, eggInstead = 0, fishAutoOff = 0;
         
         regularUsers.forEach(user => {
             const userMealOn = dayStatus[user.id] !== false;
@@ -36,13 +36,14 @@ function AdminPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule
                 totalOn++;
                 if (isFishDay) {
                     if (user.fishPreference === 'egg') eggInstead++;
-                    else if (user.fishPreference !== 'autoOff') fishEaters++;
+                    else if (user.fishPreference === 'autoOff') fishAutoOff++;
+                    else fishEaters++;
                 }
             } else {
                 totalOff++;
             }
         });
-        return { totalOn, totalOff, fishEaters, eggInstead };
+        return { totalOn, totalOff, fishEaters, eggInstead, fishAutoOff };
     };
 
     const stats = getMealStats();
@@ -244,7 +245,7 @@ function DashboardTab({ stats, isMealLocked, setIsMealLocked, todayMenu, isFishD
 
             {/* Fish Day Stats */}
             {isFishDay && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-2xl p-5">
                         <p className="text-blue-300 text-sm mb-1">🐟 মাছ খাবে</p>
                         <p className="text-3xl font-black text-white">{stats.fishEaters}</p>
@@ -252,6 +253,10 @@ function DashboardTab({ stats, isMealLocked, setIsMealLocked, todayMenu, isFishD
                     <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5">
                         <p className="text-amber-300 text-sm mb-1">🥚 ডিম খাবে</p>
                         <p className="text-3xl font-black text-white">{stats.eggInstead}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-2xl p-5">
+                        <p className="text-red-300 text-sm mb-1">🚫 মাছ কারণে অফ</p>
+                        <p className="text-3xl font-black text-white">{stats.fishAutoOff}</p>
                     </div>
                 </div>
             )}
