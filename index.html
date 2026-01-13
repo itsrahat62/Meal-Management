@@ -1,1336 +1,1063 @@
-import React, { useState, useEffect } from 'react';
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>মিল ম্যানেজমেন্ট সিস্টেম</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Noto Sans Bengali', sans-serif; }
+        body { margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+const { useState, useEffect } = React;
 
-// ===================== DATA STORE =====================
+// ==================== ডাটা স্টোর ====================
+const getStoredData = (key, defaultValue) => {
+    try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : defaultValue;
+    } catch {
+        return defaultValue;
+    }
+};
+
 const initialUsers = [
-  { id: 1, name: 'Admin', username: 'admin', password: 'admin', role: 'admin', fishPreference: 'normal', mealBalance: 0 }
+    { id: 1, name: 'Admin', username: 'admin', password: 'admin', role: 'admin', fishPreference: 'normal', mealBalance: 0 }
 ];
 
 const initialMenuSchedule = [
-  { date: '2025-01-14', menu: 'মাংস', description: 'গরুর মাংস ভুনা' },
-  { date: '2025-01-15', menu: 'মাছ', description: 'রুই মাছের ঝোল' },
-  { date: '2025-01-16', menu: 'ডিম', description: 'ডিম ভাজি ও সবজি' },
-  { date: '2025-01-17', menu: 'মাংস', description: 'মুরগির রোস্ট' },
-  { date: '2025-01-18', menu: 'মাছ', description: 'ইলিশ ভাপা' },
+    { date: '2025-01-14', menu: 'মাংস', description: 'গরুর মাংস ভুনা' },
+    { date: '2025-01-15', menu: 'মাছ', description: 'রুই মাছের ঝোল' },
+    { date: '2025-01-16', menu: 'ডিম', description: 'ডিম ভাজি ও সবজি' },
+    { date: '2025-01-17', menu: 'মাংস', description: 'মুরগির রোস্ট' },
+    { date: '2025-01-18', menu: 'মাছ', description: 'ইলিশ ভাপা' },
+    { date: '2025-01-19', menu: 'ডিম', description: 'ডিম কারি' },
+    { date: '2025-01-20', menu: 'মাংস', description: 'খাসির মাংস' },
 ];
 
-// ===================== ICONS =====================
-const Icons = {
-  User: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
-    </svg>
-  ),
-  Admin: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M12 15l-2 5l9-9l-9-9l2 5l-4 4l4 4z"/>
-      <circle cx="12" cy="12" r="10"/>
-    </svg>
-  ),
-  Calendar: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <rect x="3" y="4" width="18" height="18" rx="2"/>
-      <path d="M16 2v4M8 2v4M3 10h18"/>
-    </svg>
-  ),
-  Meal: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
-    </svg>
-  ),
-  Money: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-    </svg>
-  ),
-  Report: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-    </svg>
-  ),
-  Fish: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M6.5 12c2-4 5.5-6 10.5-6-5 4-5 8 0 12-5 0-8.5-2-10.5-6z"/>
-      <circle cx="4" cy="12" r="1"/>
-    </svg>
-  ),
-  Logout: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-    </svg>
-  ),
-  Check: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <polyline points="20,6 9,17 4,12"/>
-    </svg>
-  ),
-  X: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  ),
-  Plus: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  ),
-  Settings: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  ),
-  Download: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-    </svg>
-  ),
-  Shopping: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/>
-    </svg>
-  ),
-};
+// ==================== মেইন অ্যাপ ====================
+function App() {
+    const [currentUser, setCurrentUser] = useState(null);
+    const [users, setUsers] = useState(() => getStoredData('meal_users', initialUsers));
+    const [menuSchedule, setMenuSchedule] = useState(() => getStoredData('meal_menu', initialMenuSchedule));
+    const [expenses, setExpenses] = useState(() => getStoredData('meal_expenses', []));
+    const [mealStatus, setMealStatus] = useState(() => getStoredData('meal_status', {}));
+    const [isMealLocked, setIsMealLocked] = useState(() => getStoredData('meal_locked', false));
+    const today = new Date().toISOString().split('T')[0];
 
-// ===================== MAIN APP =====================
-export default function MealManagementSystem() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [users, setUsers] = useState(initialUsers);
-  const [menuSchedule, setMenuSchedule] = useState(initialMenuSchedule);
-  const [expenses, setExpenses] = useState([]);
-  const [mealStatus, setMealStatus] = useState({}); // { date: { userId: boolean } }
-  const [isMealLocked, setIsMealLocked] = useState(false);
-  const [stockAdjustment, setStockAdjustment] = useState({ opening: 0, closing: 0 });
+    useEffect(() => { localStorage.setItem('meal_users', JSON.stringify(users)); }, [users]);
+    useEffect(() => { localStorage.setItem('meal_menu', JSON.stringify(menuSchedule)); }, [menuSchedule]);
+    useEffect(() => { localStorage.setItem('meal_expenses', JSON.stringify(expenses)); }, [expenses]);
+    useEffect(() => { localStorage.setItem('meal_status', JSON.stringify(mealStatus)); }, [mealStatus]);
+    useEffect(() => { localStorage.setItem('meal_locked', JSON.stringify(isMealLocked)); }, [isMealLocked]);
 
-  const today = new Date().toISOString().split('T')[0];
+    if (!currentUser) {
+        return <LoginScreen users={users} setCurrentUser={setCurrentUser} />;
+    }
 
-  // ===================== LOGIN SCREEN =====================
-  if (!currentUser) {
-    return <LoginScreen users={users} setCurrentUser={setCurrentUser} />;
-  }
+    if (currentUser.role === 'admin') {
+        return (
+            <AdminPanel
+                currentUser={currentUser}
+                setCurrentUser={setCurrentUser}
+                users={users}
+                setUsers={setUsers}
+                menuSchedule={menuSchedule}
+                setMenuSchedule={setMenuSchedule}
+                expenses={expenses}
+                setExpenses={setExpenses}
+                mealStatus={mealStatus}
+                setMealStatus={setMealStatus}
+                isMealLocked={isMealLocked}
+                setIsMealLocked={setIsMealLocked}
+                today={today}
+            />
+        );
+    }
 
-  // ===================== ADMIN PANEL =====================
-  if (currentUser.role === 'admin') {
     return (
-      <AdminPanel 
-        currentUser={currentUser}
-        setCurrentUser={setCurrentUser}
-        users={users}
-        setUsers={setUsers}
-        menuSchedule={menuSchedule}
-        setMenuSchedule={setMenuSchedule}
-        expenses={expenses}
-        setExpenses={setExpenses}
-        mealStatus={mealStatus}
-        setMealStatus={setMealStatus}
-        isMealLocked={isMealLocked}
-        setIsMealLocked={setIsMealLocked}
-        stockAdjustment={stockAdjustment}
-        setStockAdjustment={setStockAdjustment}
-        today={today}
-      />
+        <UserPanel
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            users={users}
+            setUsers={setUsers}
+            menuSchedule={menuSchedule}
+            expenses={expenses}
+            mealStatus={mealStatus}
+            setMealStatus={setMealStatus}
+            isMealLocked={isMealLocked}
+            today={today}
+        />
     );
-  }
-
-  // ===================== USER PANEL =====================
-  return (
-    <UserPanel 
-      currentUser={currentUser}
-      setCurrentUser={setCurrentUser}
-      users={users}
-      setUsers={setUsers}
-      menuSchedule={menuSchedule}
-      expenses={expenses}
-      mealStatus={mealStatus}
-      setMealStatus={setMealStatus}
-      isMealLocked={isMealLocked}
-      today={today}
-    />
-  );
 }
 
-// ===================== LOGIN SCREEN =====================
+// ==================== লগইন স্ক্রিন ====================
 function LoginScreen({ users, setCurrentUser }) {
-  const [loginType, setLoginType] = useState(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+    const [loginType, setLoginType] = useState(null);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    const user = users.find(u => 
-      u.username === username && 
-      u.password === password &&
-      (loginType === 'admin' ? u.role === 'admin' : u.role === 'user')
-    );
-    
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      setError('ইউজারনেম বা পাসওয়ার্ড ভুল হয়েছে');
-    }
-  };
-
-  if (!loginType) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-cyan-950 flex items-center justify-center p-4">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"/>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}/>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/5 rounded-full blur-3xl"/>
-        </div>
-        
-        <div className="relative z-10 text-center">
-          <div className="mb-12">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-3xl shadow-2xl shadow-emerald-500/30 mb-6 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-              <Icons.Meal />
-              <span className="text-4xl">🍽️</span>
-            </div>
-            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 mb-3" style={{fontFamily: 'Noto Sans Bengali, sans-serif'}}>
-              মিল ম্যানেজমেন্ট
-            </h1>
-            <p className="text-teal-400/70 text-lg">আপনার মেসের সম্পূর্ণ হিসাব এক জায়গায়</p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <button
-              onClick={() => setLoginType('user')}
-              className="group relative px-10 py-6 bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border-2 border-emerald-500/30 rounded-2xl hover:border-emerald-400 hover:bg-emerald-600/30 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/0 to-emerald-400/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"/>
-              <div className="relative">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <Icons.User />
-                  <span className="text-2xl text-white">👤</span>
-                </div>
-                <span className="text-emerald-200 text-xl font-bold block">ইউজার লগইন</span>
-                <span className="text-emerald-400/60 text-sm mt-1 block">সাধারণ সদস্যদের জন্য</span>
-              </div>
-            </button>
-            
-            <button
-              onClick={() => setLoginType('admin')}
-              className="group relative px-10 py-6 bg-gradient-to-br from-cyan-600/20 to-cyan-800/20 border-2 border-cyan-500/30 rounded-2xl hover:border-cyan-400 hover:bg-cyan-600/30 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/0 to-cyan-400/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"/>
-              <div className="relative">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                  <Icons.Admin />
-                  <span className="text-2xl text-white">👨‍💼</span>
-                </div>
-                <span className="text-cyan-200 text-xl font-bold block">অ্যাডমিন লগইন</span>
-                <span className="text-cyan-400/60 text-sm mt-1 block">ম্যানেজারদের জন্য</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-cyan-950 flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl"/>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"/>
-      </div>
-      
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
-          <button 
-            onClick={() => setLoginType(null)}
-            className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 transition-colors"
-          >
-            ← পেছনে যান
-          </button>
-          
-          <div className="text-center mb-8">
-            <div className={`w-20 h-20 mx-auto mb-4 bg-gradient-to-br ${loginType === 'admin' ? 'from-cyan-400 to-cyan-600' : 'from-emerald-400 to-emerald-600'} rounded-2xl flex items-center justify-center shadow-lg`}>
-              <span className="text-3xl">{loginType === 'admin' ? '👨‍💼' : '👤'}</span>
-            </div>
-            <h2 className="text-2xl font-bold text-white">
-              {loginType === 'admin' ? 'অ্যাডমিন' : 'ইউজার'} লগইন
-            </h2>
-          </div>
-          
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-xl mb-6 text-center">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-5">
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">ইউজারনেম</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                placeholder="ইউজারনেম লিখুন"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">পাসওয়ার্ড</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                placeholder="পাসওয়ার্ড লিখুন"
-              />
-            </div>
-            
-            <button
-              onClick={handleLogin}
-              className={`w-full py-4 bg-gradient-to-r ${loginType === 'admin' ? 'from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500' : 'from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500'} text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-[1.02]`}
-            >
-              লগইন করুন
-            </button>
-          </div>
-          
-          {loginType === 'admin' && (
-            <p className="text-center text-slate-500 text-sm mt-6">
-              ডিফল্ট: admin / admin
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ===================== ADMIN PANEL =====================
-function AdminPanel({ 
-  currentUser, setCurrentUser, users, setUsers, menuSchedule, setMenuSchedule,
-  expenses, setExpenses, mealStatus, setMealStatus, isMealLocked, setIsMealLocked,
-  stockAdjustment, setStockAdjustment, today
-}) {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [showMenuModal, setShowMenuModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-
-  const tabs = [
-    { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: '📊' },
-    { id: 'users', label: 'ইউজার', icon: '👥' },
-    { id: 'menu', label: 'মেনু শিডিউল', icon: '📅' },
-    { id: 'expenses', label: 'খরচ', icon: '💰' },
-    { id: 'reports', label: 'রিপোর্ট', icon: '📈' },
-    { id: 'settings', label: 'সেটিংস', icon: '⚙️' },
-  ];
-
-  const regularUsers = users.filter(u => u.role === 'user');
-  const todayMenu = menuSchedule.find(m => m.date === today);
-  const isFishDay = todayMenu?.menu === 'মাছ';
-
-  // Calculate meal stats
-  const getMealStats = () => {
-    const dayStatus = mealStatus[today] || {};
-    let totalOn = 0, totalOff = 0, fishEaters = 0, eggInstead = 0, autoOff = 0;
-
-    regularUsers.forEach(user => {
-      const userMealOn = dayStatus[user.id] !== false;
-      if (userMealOn) {
-        totalOn++;
-        if (isFishDay) {
-          if (user.fishPreference === 'egg') eggInstead++;
-          else if (user.fishPreference !== 'autoOff') fishEaters++;
+    const handleLogin = () => {
+        const user = users.find(u => 
+            u.username === username && 
+            u.password === password && 
+            (loginType === 'admin' ? u.role === 'admin' : u.role === 'user')
+        );
+        if (user) {
+            setCurrentUser(user);
+        } else {
+            setError('ইউজারনেম বা পাসওয়ার্ড ভুল হয়েছে');
         }
-      } else {
-        totalOff++;
-      }
-      if (isFishDay && user.fishPreference === 'autoOff') autoOff++;
-    });
+    };
 
-    return { totalOn, totalOff, fishEaters, eggInstead, autoOff };
-  };
-
-  const stats = getMealStats();
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center">
-              <span className="text-xl">🍽️</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">মিল ম্যানেজমেন্ট</h1>
-              <p className="text-cyan-400 text-sm">অ্যাডমিন প্যানেল</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
-          >
-            <Icons.Logout />
-            <span>লগআউট</span>
-          </button>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/30' 
-                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Meal Lock Control */}
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">আজকের মিল কন্ট্রোল</h3>
-                  <p className="text-slate-400">
-                    {isMealLocked 
-                      ? '🔒 মিল লক করা আছে - ইউজাররা পরিবর্তন করতে পারবে না' 
-                      : '🔓 মিল আনলক আছে - ইউজাররা পরিবর্তন করতে পারবে'}
-                  </p>
+    if (!loginType) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-cyan-950 flex items-center justify-center p-4">
+                <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
                 </div>
-                <button
-                  onClick={() => setIsMealLocked(!isMealLocked)}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 ${
-                    isMealLocked 
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
-                      : 'bg-gradient-to-r from-red-500 to-red-600 text-white'
-                  }`}
-                >
-                  {isMealLocked ? '🔓 আনলক করুন' : '🔒 লক করুন (বাজার যাচ্ছি)'}
-                </button>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-500/30 rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-                    <span className="text-2xl">✅</span>
-                  </div>
-                  <div>
-                    <p className="text-emerald-300 text-sm">মিল অন</p>
-                    <p className="text-3xl font-black text-white">{stats.totalOn}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
-                    <span className="text-2xl">❌</span>
-                  </div>
-                  <div>
-                    <p className="text-red-300 text-sm">মিল অফ</p>
-                    <p className="text-3xl font-black text-white">{stats.totalOff}</p>
-                  </div>
-                </div>
-              </div>
-
-              {isFishDay && (
-                <>
-                  <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-2xl p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                        <span className="text-2xl">🐟</span>
-                      </div>
-                      <div>
-                        <p className="text-blue-300 text-sm">মাছ খাবে</p>
-                        <p className="text-3xl font-black text-white">{stats.fishEaters}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                        <span className="text-2xl">🥚</span>
-                      </div>
-                      <div>
-                        <p className="text-amber-300 text-sm">ডিম খাবে</p>
-                        <p className="text-3xl font-black text-white">{stats.eggInstead}</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Today's Menu */}
-            {todayMenu && (
-              <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6">
-                <h3 className="text-lg font-bold text-white mb-3">📅 আজকের মেনু</h3>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center">
-                    <span className="text-3xl">
-                      {todayMenu.menu === 'মাছ' ? '🐟' : todayMenu.menu === 'মাংস' ? '🍖' : '🥚'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-white">{todayMenu.menu}</p>
-                    <p className="text-purple-300">{todayMenu.description}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Shopping Summary when locked */}
-            {isMealLocked && (
-              <div className="bg-gradient-to-br from-cyan-600/20 to-cyan-800/20 border border-cyan-500/30 rounded-2xl p-6">
-                <h3 className="text-lg font-bold text-white mb-4">🛒 বাজারের তালিকা</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                    <span className="text-slate-300">মোট মিল</span>
-                    <span className="text-xl font-bold text-white">{stats.totalOn} জন</span>
-                  </div>
-                  {isFishDay && (
-                    <>
-                      <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                        <span className="text-slate-300">🐟 মাছ খাবে</span>
-                        <span className="text-xl font-bold text-blue-400">{stats.fishEaters} জন</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                        <span className="text-slate-300">🥚 ডিম খাবে (মাছের বদলে)</span>
-                        <span className="text-xl font-bold text-amber-400">{stats.eggInstead} জন</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                        <span className="text-slate-300">🚫 অটো অফ</span>
-                        <span className="text-xl font-bold text-red-400">{stats.autoOff} জন</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Users Tab */}
-        {activeTab === 'users' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">ইউজার ম্যানেজমেন্ট</h2>
-              <button
-                onClick={() => setShowUserModal(true)}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 hover:from-emerald-400 hover:to-emerald-500 transition-all"
-              >
-                <Icons.Plus />
-                <span>নতুন ইউজার</span>
-              </button>
-            </div>
-
-            <div className="grid gap-4">
-              {regularUsers.map(user => (
-                <div key={user.id} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center text-2xl">
-                      👤
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-white">{user.name}</p>
-                      <p className="text-slate-400">@{user.username}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      user.fishPreference === 'autoOff' ? 'bg-red-500/20 text-red-300' :
-                      user.fishPreference === 'egg' ? 'bg-amber-500/20 text-amber-300' :
-                      'bg-blue-500/20 text-blue-300'
-                    }`}>
-                      {user.fishPreference === 'autoOff' ? '🚫 মাছ অটো অফ' :
-                       user.fishPreference === 'egg' ? '🥚 মাছের বদলে ডিম' : '🐟 সাধারণ'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {showUserModal && (
-              <UserModal 
-                onClose={() => setShowUserModal(false)}
-                onSave={(newUser) => {
-                  setUsers([...users, { ...newUser, id: Date.now(), role: 'user', password: '123456', fishPreference: 'normal', mealBalance: 0 }]);
-                  setShowUserModal(false);
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Menu Tab */}
-        {activeTab === 'menu' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">মেনু শিডিউল</h2>
-              <button
-                onClick={() => setShowMenuModal(true)}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-500/30 hover:from-purple-400 hover:to-purple-500 transition-all"
-              >
-                <Icons.Plus />
-                <span>মেনু যোগ করুন</span>
-              </button>
-            </div>
-
-            <div className="grid gap-4">
-              {menuSchedule.sort((a, b) => new Date(a.date) - new Date(b.date)).map((menu, idx) => (
-                <div key={idx} className={`bg-slate-800/50 border rounded-2xl p-5 flex items-center justify-between ${
-                  menu.date === today ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-700/50'
-                }`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl ${
-                      menu.menu === 'মাছ' ? 'bg-blue-500/20' : menu.menu === 'মাংস' ? 'bg-red-500/20' : 'bg-amber-500/20'
-                    }`}>
-                      {menu.menu === 'মাছ' ? '🐟' : menu.menu === 'মাংস' ? '🍖' : '🥚'}
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-white">{menu.menu}</p>
-                      <p className="text-slate-400">{menu.description}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-slate-300 font-medium">{new Date(menu.date).toLocaleDateString('bn-BD')}</p>
-                    {menu.date === today && (
-                      <span className="text-emerald-400 text-sm">আজ</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {showMenuModal && (
-              <MenuModal 
-                onClose={() => setShowMenuModal(false)}
-                onSave={(newMenu) => {
-                  setMenuSchedule([...menuSchedule, newMenu]);
-                  setShowMenuModal(false);
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Expenses Tab */}
-        {activeTab === 'expenses' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">খরচ এন্ট্রি</h2>
-              <button
-                onClick={() => setShowExpenseModal(true)}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 hover:from-amber-400 hover:to-amber-500 transition-all"
-              >
-                <Icons.Plus />
-                <span>খরচ যোগ করুন</span>
-              </button>
-            </div>
-
-            {/* Stock Adjustment */}
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">📦 স্টক অ্যাডজাস্টমেন্ট</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">মাস শুরুতে বেঁচে থাকা (টাকা)</label>
-                  <input
-                    type="number"
-                    value={stockAdjustment.opening}
-                    onChange={(e) => setStockAdjustment({...stockAdjustment, opening: Number(e.target.value)})}
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">মাস শেষে বেঁচে থাকা (টাকা)</label>
-                  <input
-                    type="number"
-                    value={stockAdjustment.closing}
-                    onChange={(e) => setStockAdjustment({...stockAdjustment, closing: Number(e.target.value)})}
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Expense List */}
-            <div className="grid gap-4">
-              {expenses.map((expense, idx) => (
-                <div key={idx} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                        <span className="text-xl">🛒</span>
-                      </div>
-                      <div>
-                        <p className="text-lg font-bold text-white">{expense.item}</p>
-                        <p className="text-slate-400">{expense.quantity}</p>
-                      </div>
-                    </div>
-                    <p className="text-2xl font-bold text-amber-400">৳{expense.price}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {expense.isOffice && (
-                      <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">অফিস খরচ</span>
-                    )}
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      expense.type === 'monthly' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'
-                    }`}>
-                      {expense.type === 'monthly' ? 'মাসিক' : 'দৈনিক'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {showExpenseModal && (
-              <ExpenseModal 
-                onClose={() => setShowExpenseModal(false)}
-                onSave={(newExpense) => {
-                  setExpenses([...expenses, { ...newExpense, date: today }]);
-                  setShowExpenseModal(false);
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Reports Tab */}
-        {activeTab === 'reports' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">রিপোর্ট</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-500/30 rounded-2xl p-6 text-left hover:border-emerald-400 transition-all group">
-                <div className="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <p className="text-lg font-bold text-white mb-1">দৈনিক রিপোর্ট</p>
-                <p className="text-emerald-300 text-sm">আজকের বাজার ও খরচের বিবরণ</p>
-              </button>
-
-              <button className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-2xl p-6 text-left hover:border-blue-400 transition-all group">
-                <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="text-2xl">📅</span>
-                </div>
-                <p className="text-lg font-bold text-white mb-1">মাসিক রিপোর্ট</p>
-                <p className="text-blue-300 text-sm">এই মাসের সম্পূর্ণ হিসাব</p>
-              </button>
-
-              <button className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6 text-left hover:border-purple-400 transition-all group">
-                <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="text-2xl">📈</span>
-                </div>
-                <p className="text-lg font-bold text-white mb-1">বার্ষিক রিপোর্ট</p>
-                <p className="text-purple-300 text-sm">পুরো বছরের সামারি</p>
-              </button>
-            </div>
-
-            {/* Monthly Summary */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">📊 এই মাসের সামারি</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <p className="text-slate-400 text-sm mb-1">মোট খরচ</p>
-                  <p className="text-2xl font-bold text-white">৳{expenses.reduce((sum, e) => sum + e.price, 0)}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <p className="text-slate-400 text-sm mb-1">মোট মিল দিন</p>
-                  <p className="text-2xl font-bold text-white">14</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <p className="text-slate-400 text-sm mb-1">মোট ইউজার</p>
-                  <p className="text-2xl font-bold text-white">{regularUsers.length}</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <p className="text-slate-400 text-sm mb-1">গড় মিল রেট</p>
-                  <p className="text-2xl font-bold text-emerald-400">৳65</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">সেটিংস</h2>
-            
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">🔐 পাসওয়ার্ড পরিবর্তন</h3>
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">বর্তমান পাসওয়ার্ড</label>
-                  <input type="password" className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white" />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">নতুন পাসওয়ার্ড</label>
-                  <input type="password" className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white" />
-                </div>
-                <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-xl">
-                  পরিবর্তন করুন
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ===================== USER PANEL =====================
-function UserPanel({ 
-  currentUser, setCurrentUser, users, setUsers, menuSchedule, expenses, 
-  mealStatus, setMealStatus, isMealLocked, today 
-}) {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-
-  const tabs = [
-    { id: 'dashboard', label: 'হোম', icon: '🏠' },
-    { id: 'meal', label: 'মিল স্ট্যাটাস', icon: '🍽️' },
-    { id: 'menu', label: 'মেনু দেখুন', icon: '📅' },
-    { id: 'report', label: 'হিসাব', icon: '📊' },
-    { id: 'profile', label: 'প্রোফাইল', icon: '👤' },
-  ];
-
-  const todayMenu = menuSchedule.find(m => m.date === today);
-  const userMealStatus = mealStatus[today]?.[currentUser.id] !== false;
-
-  const toggleMeal = (date) => {
-    if (isMealLocked && date === today) return;
-    setMealStatus(prev => ({
-      ...prev,
-      [date]: {
-        ...prev[date],
-        [currentUser.id]: !(prev[date]?.[currentUser.id] !== false)
-      }
-    }));
-  };
-
-  const setMealRange = () => {
-    if (!dateRange.start || !dateRange.end) return;
-    const start = new Date(dateRange.start);
-    const end = new Date(dateRange.end);
-    const newStatus = { ...mealStatus };
-    
-    for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      if (!isMealLocked || dateStr !== today) {
-        if (!newStatus[dateStr]) newStatus[dateStr] = {};
-        newStatus[dateStr][currentUser.id] = false;
-      }
-    }
-    setMealStatus(newStatus);
-    setDateRange({ start: '', end: '' });
-  };
-
-  const updateFishPreference = (pref) => {
-    setUsers(users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pref } : u));
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center">
-              <span className="text-xl">🍽️</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">{currentUser.name}</h1>
-              <p className="text-emerald-400 text-sm">স্বাগতম!</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
-          >
-            <Icons.Logout />
-          </button>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg' 
-                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Dashboard */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Today's Status */}
-            <div className={`bg-gradient-to-br ${userMealStatus ? 'from-emerald-600/20 to-emerald-800/20 border-emerald-500/30' : 'from-red-600/20 to-red-800/20 border-red-500/30'} border rounded-2xl p-6`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 mb-1">আজকের মিল স্ট্যাটাস</p>
-                  <p className={`text-3xl font-black ${userMealStatus ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {userMealStatus ? '✅ অন আছে' : '❌ অফ আছে'}
-                  </p>
-                </div>
-                {!isMealLocked && (
-                  <button
-                    onClick={() => toggleMeal(today)}
-                    className={`px-6 py-3 rounded-xl font-bold transition-all ${
-                      userMealStatus 
-                        ? 'bg-red-500 hover:bg-red-600 text-white' 
-                        : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                    }`}
-                  >
-                    {userMealStatus ? 'অফ করুন' : 'অন করুন'}
-                  </button>
-                )}
-              </div>
-              {isMealLocked && (
-                <p className="text-amber-400 mt-3 text-sm">🔒 বাজার যাওয়ায় মিল পরিবর্তন বন্ধ আছে</p>
-              )}
-            </div>
-
-            {/* Today's Menu */}
-            {todayMenu && (
-              <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6">
-                <p className="text-slate-400 mb-2">আজকের মেনু</p>
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl">
-                    {todayMenu.menu === 'মাছ' ? '🐟' : todayMenu.menu === 'মাংস' ? '🍖' : '🥚'}
-                  </span>
-                  <div>
-                    <p className="text-2xl font-bold text-white">{todayMenu.menu}</p>
-                    <p className="text-purple-300">{todayMenu.description}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center">
-                <p className="text-slate-400 text-sm mb-1">এই মাসে খেয়েছি</p>
-                <p className="text-3xl font-black text-white">12 বার</p>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center">
-                <p className="text-slate-400 text-sm mb-1">মোট খরচ</p>
-                <p className="text-3xl font-black text-emerald-400">৳780</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Meal Status */}
-        {activeTab === 'meal' && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-white">মিল অন/অফ</h2>
-            
-            {/* Range Off */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">📅 রেঞ্জে মিল অফ করুন</h3>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">শুরু তারিখ</label>
-                  <input
-                    type="date"
-                    value={dateRange.start}
-                    onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-sm mb-2">শেষ তারিখ</label>
-                  <input
-                    type="date"
-                    value={dateRange.end}
-                    onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white"
-                  />
-                </div>
-              </div>
-              <button 
-                onClick={setMealRange}
-                className="w-full py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-xl"
-              >
-                এই রেঞ্জে মিল অফ করুন
-              </button>
-            </div>
-
-            {/* Next 7 days */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">📅 আগামী ৭ দিন</h3>
-              <div className="space-y-3">
-                {Array.from({ length: 7 }).map((_, i) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() + i);
-                  const dateStr = date.toISOString().split('T')[0];
-                  const menu = menuSchedule.find(m => m.date === dateStr);
-                  const isOn = mealStatus[dateStr]?.[currentUser.id] !== false;
-                  const isLocked = isMealLocked && dateStr === today;
-
-                  return (
-                    <div key={i} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-2xl ${isOn ? 'opacity-100' : 'opacity-30'}`}>
-                          {menu?.menu === 'মাছ' ? '🐟' : menu?.menu === 'মাংস' ? '🍖' : '🥚'}
-                        </span>
-                        <div>
-                          <p className="text-white font-medium">
-                            {date.toLocaleDateString('bn-BD', { weekday: 'long' })}
-                          </p>
-                          <p className="text-slate-400 text-sm">{menu?.menu || 'মেনু নেই'}</p>
+                <div className="relative z-10 text-center">
+                    <div className="mb-12">
+                        <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-3xl shadow-2xl shadow-emerald-500/30 mb-6">
+                            <span className="text-4xl">🍽️</span>
                         </div>
-                      </div>
-                      <button
-                        onClick={() => !isLocked && toggleMeal(dateStr)}
-                        disabled={isLocked}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          isLocked ? 'bg-slate-700 text-slate-500 cursor-not-allowed' :
-                          isOn ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 
-                          'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        }`}
-                      >
-                        {isLocked ? '🔒' : isOn ? '✅ অন' : '❌ অফ'}
-                      </button>
+                        <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 mb-3">
+                            মিল ম্যানেজমেন্ট
+                        </h1>
+                        <p className="text-teal-400/70 text-lg">আপনার মেসের সম্পূর্ণ হিসাব এক জায়গায়</p>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Menu */}
-        {activeTab === 'menu' && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-white">আগামী মেনু</h2>
-            <div className="grid gap-4">
-              {menuSchedule.filter(m => m.date >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).map((menu, idx) => (
-                <div key={idx} className={`bg-slate-800/50 border rounded-2xl p-5 flex items-center gap-4 ${
-                  menu.date === today ? 'border-emerald-500/50' : 'border-slate-700/50'
-                }`}>
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl ${
-                    menu.menu === 'মাছ' ? 'bg-blue-500/20' : menu.menu === 'মাংস' ? 'bg-red-500/20' : 'bg-amber-500/20'
-                  }`}>
-                    {menu.menu === 'মাছ' ? '🐟' : menu.menu === 'মাংস' ? '🍖' : '🥚'}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-lg font-bold text-white">{menu.menu}</p>
-                    <p className="text-slate-400">{menu.description}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-slate-300">{new Date(menu.date).toLocaleDateString('bn-BD')}</p>
-                    {menu.date === today && <span className="text-emerald-400 text-sm">আজ</span>}
-                  </div>
+                    <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                        <button
+                            onClick={() => setLoginType('user')}
+                            className="group relative px-10 py-6 bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border-2 border-emerald-500/30 rounded-2xl hover:border-emerald-400 transition-all"
+                        >
+                            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                <span className="text-2xl">👤</span>
+                            </div>
+                            <span className="text-emerald-200 text-xl font-bold block">ইউজার লগইন</span>
+                            <span className="text-emerald-400/60 text-sm">মিল অন/অফ করুন</span>
+                        </button>
+                        <button
+                            onClick={() => setLoginType('admin')}
+                            className="group relative px-10 py-6 bg-gradient-to-br from-cyan-600/20 to-cyan-800/20 border-2 border-cyan-500/30 rounded-2xl hover:border-cyan-400 transition-all"
+                        >
+                            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                <span className="text-2xl">👨‍💼</span>
+                            </div>
+                            <span className="text-cyan-200 text-xl font-bold block">অ্যাডমিন লগইন</span>
+                            <span className="text-cyan-400/60 text-sm">পূর্ণ নিয়ন্ত্রণ</span>
+                        </button>
+                    </div>
                 </div>
-              ))}
             </div>
-          </div>
-        )}
+        );
+    }
 
-        {/* Report */}
-        {activeTab === 'report' && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-white">আমার হিসাব</h2>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-500/30 rounded-2xl p-5 text-center">
-                <p className="text-emerald-300 text-sm mb-1">এই মাসে মোট মিল</p>
-                <p className="text-3xl font-black text-white">12 বার</p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5 text-center">
-                <p className="text-amber-300 text-sm mb-1">মোট খরচ</p>
-                <p className="text-3xl font-black text-white">৳780</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">📊 দৈনিক হিসাব</h3>
-              <div className="space-y-3">
-                {expenses.slice(0, 5).map((exp, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl">
-                    <div>
-                      <p className="text-white">{exp.item}</p>
-                      <p className="text-slate-400 text-sm">{exp.quantity}</p>
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-cyan-950 flex items-center justify-center p-4">
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
+                    <button onClick={() => setLoginType(null)} className="text-slate-400 hover:text-white mb-6 flex items-center gap-2">
+                        <span>←</span> পেছনে যান
+                    </button>
+                    <div className="text-center mb-8">
+                        <div className={`w-20 h-20 mx-auto mb-4 bg-gradient-to-br ${loginType === 'admin' ? 'from-cyan-400 to-cyan-600' : 'from-emerald-400 to-emerald-600'} rounded-2xl flex items-center justify-center`}>
+                            <span className="text-3xl">{loginType === 'admin' ? '👨‍💼' : '👤'}</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-white">{loginType === 'admin' ? 'অ্যাডমিন' : 'ইউজার'} লগইন</h2>
                     </div>
-                    <p className="text-amber-400 font-bold">৳{exp.price}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Profile */}
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-white">প্রোফাইল সেটিংস</h2>
-            
-            {/* Fish Preference */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">🐟 মাছের দিন মিল পছন্দ</h3>
-              <div className="space-y-3">
-                {[
-                  { id: 'normal', label: 'সাধারণ', desc: 'মাছ থাকলেও মিল চলবে', icon: '🐟' },
-                  { id: 'egg', label: 'ডিম', desc: 'মাছের বদলে ডিম খাব', icon: '🥚' },
-                  { id: 'autoOff', label: 'অটো অফ', desc: 'মাছের দিন মিল অটো অফ', icon: '🚫' },
-                ].map(opt => (
-                  <button
-                    key={opt.id}
-                    onClick={() => updateFishPreference(opt.id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
-                      currentUser.fishPreference === opt.id
-                        ? 'bg-emerald-500/20 border-2 border-emerald-500'
-                        : 'bg-slate-900/50 border-2 border-transparent hover:border-slate-600'
-                    }`}
-                  >
-                    <span className="text-2xl">{opt.icon}</span>
-                    <div className="text-left">
-                      <p className="text-white font-medium">{opt.label}</p>
-                      <p className="text-slate-400 text-sm">{opt.desc}</p>
-                    </div>
-                    {currentUser.fishPreference === opt.id && (
-                      <span className="ml-auto text-emerald-400">✓</span>
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-xl mb-6 text-center">
+                            {error}
+                        </div>
                     )}
-                  </button>
-                ))}
-              </div>
+                    <div className="space-y-5">
+                        <div>
+                            <label className="block text-slate-400 text-sm mb-2">ইউজারনেম</label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                                placeholder="ইউজারনেম লিখুন"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-slate-400 text-sm mb-2">পাসওয়ার্ড</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                                placeholder="পাসওয়ার্ড লিখুন"
+                            />
+                        </div>
+                        <button
+                            onClick={handleLogin}
+                            className={`w-full py-4 bg-gradient-to-r ${loginType === 'admin' ? 'from-cyan-500 to-cyan-600' : 'from-emerald-500 to-emerald-600'} text-white font-bold rounded-xl hover:opacity-90 transition-opacity`}
+                        >
+                            লগইন করুন
+                        </button>
+                    </div>
+                    {loginType === 'admin' && (
+                        <p className="text-center text-slate-500 text-sm mt-6">ডিফল্ট: admin / admin</p>
+                    )}
+                    {loginType === 'user' && (
+                        <p className="text-center text-slate-500 text-sm mt-6">ডিফল্ট পাসওয়ার্ড: 123456</p>
+                    )}
+                </div>
             </div>
-
-            {/* Password Change */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">🔐 পাসওয়ার্ড পরিবর্তন</h3>
-              <div className="space-y-4">
-                <input type="password" placeholder="বর্তমান পাসওয়ার্ড" className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white" />
-                <input type="password" placeholder="নতুন পাসওয়ার্ড" className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white" />
-                <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl">
-                  পরিবর্তন করুন
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 }
 
-// ===================== MODALS =====================
-function UserModal({ onClose, onSave }) {
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
+// ==================== অ্যাডমিন প্যানেল ====================
+function AdminPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule, setMenuSchedule, expenses, setExpenses, mealStatus, setMealStatus, isMealLocked, setIsMealLocked, today }) {
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [showMenuModal, setShowMenuModal] = useState(false);
+    const [showExpenseModal, setShowExpenseModal] = useState(false);
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-white mb-6">নতুন ইউজার তৈরি</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">নাম</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="পুরো নাম"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">ইউজারনেম</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="ইউজারনেম"
-            />
-          </div>
-          <p className="text-slate-500 text-sm">ডিফল্ট পাসওয়ার্ড: 123456</p>
+    const tabs = [
+        { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: '📊' },
+        { id: 'users', label: 'ইউজার', icon: '👥' },
+        { id: 'menu', label: 'মেনু', icon: '📅' },
+        { id: 'expenses', label: 'খরচ', icon: '💰' },
+        { id: 'reports', label: 'রিপোর্ট', icon: '📈' }
+    ];
+
+    const regularUsers = users.filter(u => u.role === 'user');
+    const todayMenu = menuSchedule.find(m => m.date === today);
+    const isFishDay = todayMenu?.menu === 'মাছ';
+
+    const getMealStats = () => {
+        const dayStatus = mealStatus[today] || {};
+        let totalOn = 0, totalOff = 0, fishEaters = 0, eggInstead = 0;
+        
+        regularUsers.forEach(user => {
+            const userMealOn = dayStatus[user.id] !== false;
+            if (userMealOn) {
+                totalOn++;
+                if (isFishDay) {
+                    if (user.fishPreference === 'egg') eggInstead++;
+                    else if (user.fishPreference !== 'autoOff') fishEaters++;
+                }
+            } else {
+                totalOff++;
+            }
+        });
+        return { totalOn, totalOff, fishEaters, eggInstead };
+    };
+
+    const stats = getMealStats();
+    const totalExpense = expenses.reduce((sum, e) => sum + Number(e.price), 0);
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            {/* Header */}
+            <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center">
+                            <span className="text-xl">🍽️</span>
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">মিল ম্যানেজমেন্ট</h1>
+                            <p className="text-cyan-400 text-sm">অ্যাডমিন প্যানেল</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setCurrentUser(null)}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                    >
+                        লগআউট
+                    </button>
+                </div>
+            </header>
+
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium whitespace-nowrap transition-all ${
+                                activeTab === tab.id
+                                    ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700'
+                            }`}
+                        >
+                            <span>{tab.icon}</span>
+                            <span>{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Dashboard Tab */}
+                {activeTab === 'dashboard' && (
+                    <div className="space-y-6">
+                        {/* Meal Lock Control */}
+                        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-6">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-2">আজকের মিল কন্ট্রোল</h3>
+                                    <p className="text-slate-400">
+                                        {isMealLocked ? '🔒 মিল লক করা আছে - বাজার যাওয়া হয়েছে' : '🔓 মিল আনলক আছে - ইউজাররা পরিবর্তন করতে পারবে'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setIsMealLocked(!isMealLocked)}
+                                    className={`px-6 py-3 rounded-xl font-bold transition-all ${
+                                        isMealLocked
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+                                            : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+                                    } text-white`}
+                                >
+                                    {isMealLocked ? '🔓 আনলক করুন' : '🔒 লক করুন'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-500/30 rounded-2xl p-5">
+                                <p className="text-emerald-300 text-sm mb-1">মিল অন</p>
+                                <p className="text-3xl font-black text-white">{stats.totalOn}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-2xl p-5">
+                                <p className="text-red-300 text-sm mb-1">মিল অফ</p>
+                                <p className="text-3xl font-black text-white">{stats.totalOff}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5">
+                                <p className="text-amber-300 text-sm mb-1">মোট খরচ</p>
+                                <p className="text-3xl font-black text-white">৳{totalExpense}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-5">
+                                <p className="text-purple-300 text-sm mb-1">মোট ইউজার</p>
+                                <p className="text-3xl font-black text-white">{regularUsers.length}</p>
+                            </div>
+                        </div>
+
+                        {/* Fish Day Stats */}
+                        {isFishDay && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-2xl p-5">
+                                    <p className="text-blue-300 text-sm mb-1">🐟 মাছ খাবে</p>
+                                    <p className="text-3xl font-black text-white">{stats.fishEaters}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5">
+                                    <p className="text-amber-300 text-sm mb-1">🥚 ডিম খাবে</p>
+                                    <p className="text-3xl font-black text-white">{stats.eggInstead}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Today's Menu */}
+                        {todayMenu && (
+                            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-3">📅 আজকের মেনু</h3>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-4xl">
+                                        {todayMenu.menu === 'মাছ' ? '🐟' : todayMenu.menu === 'মাংস' ? '🍖' : '🥚'}
+                                    </span>
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">{todayMenu.menu}</p>
+                                        <p className="text-purple-300">{todayMenu.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Users Tab */}
+                {activeTab === 'users' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-white">ইউজার ম্যানেজমেন্ট</h2>
+                            <button
+                                onClick={() => setShowUserModal(true)}
+                                className="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:opacity-90"
+                            >
+                                + নতুন ইউজার
+                            </button>
+                        </div>
+                        <div className="grid gap-4">
+                            {regularUsers.length === 0 ? (
+                                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 text-center">
+                                    <p className="text-slate-400">কোনো ইউজার নেই। নতুন ইউজার যোগ করুন।</p>
+                                </div>
+                            ) : (
+                                regularUsers.map(user => (
+                                    <div key={user.id} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center text-2xl">
+                                                👤
+                                            </div>
+                                            <div>
+                                                <p className="text-lg font-bold text-white">{user.name}</p>
+                                                <p className="text-slate-400">@{user.username}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-3 py-1 rounded-full text-sm ${
+                                                user.fishPreference === 'autoOff' ? 'bg-red-500/20 text-red-300' :
+                                                user.fishPreference === 'egg' ? 'bg-amber-500/20 text-amber-300' :
+                                                'bg-blue-500/20 text-blue-300'
+                                            }`}>
+                                                {user.fishPreference === 'autoOff' ? '🚫 অটো অফ' :
+                                                 user.fishPreference === 'egg' ? '🥚 ডিম' : '🐟 সাধারণ'}
+                                            </span>
+                                            <button
+                                                onClick={() => setUsers(users.filter(u => u.id !== user.id))}
+                                                className="px-3 py-1 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30"
+                                            >
+                                                ডিলিট
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        {showUserModal && (
+                            <UserModal
+                                onClose={() => setShowUserModal(false)}
+                                onSave={(newUser) => {
+                                    setUsers([...users, {
+                                        ...newUser,
+                                        id: Date.now(),
+                                        role: 'user',
+                                        password: '123456',
+                                        fishPreference: 'normal'
+                                    }]);
+                                    setShowUserModal(false);
+                                }}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Menu Tab */}
+                {activeTab === 'menu' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-white">মেনু শিডিউল</h2>
+                            <button
+                                onClick={() => setShowMenuModal(true)}
+                                className="px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl hover:opacity-90"
+                            >
+                                + মেনু যোগ
+                            </button>
+                        </div>
+                        <div className="grid gap-4">
+                            {menuSchedule.sort((a, b) => new Date(a.date) - new Date(b.date)).map((menu, idx) => (
+                                <div key={idx} className={`bg-slate-800/50 border rounded-2xl p-5 flex items-center justify-between ${
+                                    menu.date === today ? 'border-emerald-500/50' : 'border-slate-700/50'
+                                }`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl ${
+                                            menu.menu === 'মাছ' ? 'bg-blue-500/20' :
+                                            menu.menu === 'মাংস' ? 'bg-red-500/20' : 'bg-amber-500/20'
+                                        }`}>
+                                            {menu.menu === 'মাছ' ? '🐟' : menu.menu === 'মাংস' ? '🍖' : '🥚'}
+                                        </div>
+                                        <div>
+                                            <p className="text-lg font-bold text-white">{menu.menu}</p>
+                                            <p className="text-slate-400">{menu.description}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-slate-300">{new Date(menu.date).toLocaleDateString('bn-BD')}</p>
+                                        {menu.date === today && <span className="text-emerald-400 text-sm">আজ</span>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {showMenuModal && (
+                            <MenuModal
+                                onClose={() => setShowMenuModal(false)}
+                                onSave={(newMenu) => {
+                                    setMenuSchedule([...menuSchedule, newMenu]);
+                                    setShowMenuModal(false);
+                                }}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Expenses Tab */}
+                {activeTab === 'expenses' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-white">খরচ এন্ট্রি</h2>
+                            <button
+                                onClick={() => setShowExpenseModal(true)}
+                                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl hover:opacity-90"
+                            >
+                                + খরচ যোগ
+                            </button>
+                        </div>
+                        <div className="bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 rounded-2xl p-5 mb-4">
+                            <p className="text-amber-300 text-sm">মোট খরচ</p>
+                            <p className="text-3xl font-black text-white">৳{totalExpense}</p>
+                        </div>
+                        <div className="grid gap-4">
+                            {expenses.length === 0 ? (
+                                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 text-center">
+                                    <p className="text-slate-400">কোনো খরচ এন্ট্রি নেই।</p>
+                                </div>
+                            ) : (
+                                expenses.map((expense, idx) => (
+                                    <div key={idx} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                                                    <span className="text-xl">🛒</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-lg font-bold text-white">{expense.item}</p>
+                                                    <p className="text-slate-400">{expense.quantity}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-2xl font-bold text-amber-400">৳{expense.price}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {expense.isOffice && (
+                                                <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
+                                                    অফিস খরচ
+                                                </span>
+                                            )}
+                                            <span className={`px-3 py-1 rounded-full text-sm ${
+                                                expense.type === 'monthly' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'
+                                            }`}>
+                                                {expense.type === 'monthly' ? 'মাসিক' : 'দৈনিক'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        {showExpenseModal && (
+                            <ExpenseModal
+                                onClose={() => setShowExpenseModal(false)}
+                                onSave={(newExpense) => {
+                                    setExpenses([...expenses, { ...newExpense, date: today }]);
+                                    setShowExpenseModal(false);
+                                }}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Reports Tab */}
+                {activeTab === 'reports' && (
+                    <div className="space-y-6">
+                        <h2 className="text-2xl font-bold text-white">রিপোর্ট ও হিসাব</h2>
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4">📊 মিল সামারি</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">মোট ইউজার</span>
+                                        <span className="text-white font-bold">{regularUsers.length} জন</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">আজ মিল অন</span>
+                                        <span className="text-emerald-400 font-bold">{stats.totalOn} জন</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">আজ মিল অফ</span>
+                                        <span className="text-red-400 font-bold">{stats.totalOff} জন</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4">💰 খরচের হিসাব</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">মোট খরচ</span>
+                                        <span className="text-amber-400 font-bold">৳{totalExpense}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">দৈনিক খরচ</span>
+                                        <span className="text-white font-bold">
+                                            ৳{expenses.filter(e => e.type === 'daily').reduce((s, e) => s + Number(e.price), 0)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">মাসিক খরচ</span>
+                                        <span className="text-white font-bold">
+                                            ৳{expenses.filter(e => e.type === 'monthly').reduce((s, e) => s + Number(e.price), 0)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
-            বাতিল
-          </button>
-          <button 
-            onClick={() => onSave({ name, username })}
-            className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl"
-          >
-            তৈরি করুন
-          </button>
+    );
+}
+
+// ==================== ইউজার প্যানেল ====================
+function UserPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule, expenses, mealStatus, setMealStatus, isMealLocked, today }) {
+    const [activeTab, setActiveTab] = useState('dashboard');
+
+    const tabs = [
+        { id: 'dashboard', label: 'হোম', icon: '🏠' },
+        { id: 'meal', label: 'মিল', icon: '🍽️' },
+        { id: 'menu', label: 'মেনু', icon: '📅' },
+        { id: 'profile', label: 'প্রোফাইল', icon: '👤' }
+    ];
+
+    const todayMenu = menuSchedule.find(m => m.date === today);
+    const userMealStatus = mealStatus[today]?.[currentUser.id] !== false;
+
+    const toggleMeal = (date) => {
+        if (isMealLocked && date === today) return;
+        setMealStatus(prev => ({
+            ...prev,
+            [date]: {
+                ...prev[date],
+                [currentUser.id]: !(prev[date]?.[currentUser.id] !== false)
+            }
+        }));
+    };
+
+    const updateFishPreference = (pref) => {
+        setUsers(users.map(u => u.id === currentUser.id ? { ...u, fishPreference: pref } : u));
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            {/* Header */}
+            <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
+                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center">
+                            <span className="text-xl">🍽️</span>
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-bold text-white">{currentUser.name}</h1>
+                            <p className="text-emerald-400 text-sm">স্বাগতম!</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setCurrentUser(null)}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl"
+                    >
+                        লগআউট
+                    </button>
+                </div>
+            </header>
+
+            <div className="max-w-4xl mx-auto px-4 py-6">
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap ${
+                                activeTab === tab.id
+                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                    : 'bg-slate-800/50 text-slate-400'
+                            }`}
+                        >
+                            <span>{tab.icon}</span>
+                            <span>{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Dashboard Tab */}
+                {activeTab === 'dashboard' && (
+                    <div className="space-y-6">
+                        <div className={`bg-gradient-to-br ${
+                            userMealStatus 
+                                ? 'from-emerald-600/20 to-emerald-800/20 border-emerald-500/30' 
+                                : 'from-red-600/20 to-red-800/20 border-red-500/30'
+                        } border rounded-2xl p-6`}>
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                    <p className="text-slate-400 mb-1">আজকের মিল</p>
+                                    <p className={`text-3xl font-black ${userMealStatus ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {userMealStatus ? '✅ অন আছে' : '❌ অফ আছে'}
+                                    </p>
+                                </div>
+                                {!isMealLocked && (
+                                    <button
+                                        onClick={() => toggleMeal(today)}
+                                        className={`px-6 py-3 rounded-xl font-bold ${
+                                            userMealStatus ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+                                        } text-white`}
+                                    >
+                                        {userMealStatus ? 'অফ করুন' : 'অন করুন'}
+                                    </button>
+                                )}
+                            </div>
+                            {isMealLocked && (
+                                <p className="text-amber-400 mt-3 text-sm">🔒 বাজার যাওয়ায় মিল পরিবর্তন বন্ধ আছে</p>
+                            )}
+                        </div>
+
+                        {todayMenu && (
+                            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border border-purple-500/30 rounded-2xl p-6">
+                                <p className="text-slate-400 mb-2">আজকের মেনু</p>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-4xl">
+                                        {todayMenu.menu === 'মাছ' ? '🐟' : todayMenu.menu === 'মাংস' ? '🍖' : '🥚'}
+                                    </span>
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">{todayMenu.menu}</p>
+                                        <p className="text-purple-300">{todayMenu.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Meal Tab */}
+                {activeTab === 'meal' && (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                            <h3 className="text-lg font-bold text-white mb-4">📅 আগামী ৭ দিন</h3>
+                            <div className="space-y-3">
+                                {Array.from({ length: 7 }).map((_, i) => {
+                                    const date = new Date();
+                                    date.setDate(date.getDate() + i);
+                                    const dateStr = date.toISOString().split('T')[0];
+                                    const menu = menuSchedule.find(m => m.date === dateStr);
+                                    const isOn = mealStatus[dateStr]?.[currentUser.id] !== false;
+                                    const isLocked = isMealLocked && dateStr === today;
+
+                                    return (
+                                        <div key={i} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">
+                                                    {menu?.menu === 'মাছ' ? '🐟' : menu?.menu === 'মাংস' ? '🍖' : '🥚'}
+                                                </span>
+                                                <div>
+                                                    <p className="text-white font-medium">
+                                                        {date.toLocaleDateString('bn-BD', { weekday: 'long' })}
+                                                    </p>
+                                                    <p className="text-slate-400 text-sm">{menu?.menu || 'মেনু নেই'}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => !isLocked && toggleMeal(dateStr)}
+                                                disabled={isLocked}
+                                                className={`px-4 py-2 rounded-lg font-medium ${
+                                                    isLocked
+                                                        ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                                        : isOn
+                                                            ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                                                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                                }`}
+                                            >
+                                                {isLocked ? '🔒' : isOn ? '✅ অন' : '❌ অফ'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Menu Tab */}
+                {activeTab === 'menu' && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-white">📅 এই সপ্তাহের মেনু</h3>
+                        {menuSchedule.sort((a, b) => new Date(a.date) - new Date(b.date)).map((menu, idx) => (
+                            <div key={idx} className={`bg-slate-800/50 border rounded-2xl p-5 ${
+                                menu.date === today ? 'border-emerald-500/50' : 'border-slate-700/50'
+                            }`}>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-3xl">
+                                        {menu.menu === 'মাছ' ? '🐟' : menu.menu === 'মাংস' ? '🍖' : '🥚'}
+                                    </span>
+                                    <div className="flex-1">
+                                        <p className="text-lg font-bold text-white">{menu.menu}</p>
+                                        <p className="text-slate-400">{menu.description}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-slate-300 text-sm">
+                                            {new Date(menu.date).toLocaleDateString('bn-BD', { weekday: 'long' })}
+                                        </p>
+                                        {menu.date === today && <span className="text-emerald-400 text-xs">আজ</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Profile Tab */}
+                {activeTab === 'profile' && (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center text-4xl">
+                                    👤
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-white">{currentUser.name}</p>
+                                    <p className="text-slate-400">@{currentUser.username}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                            <h3 className="text-lg font-bold text-white mb-4">🐟 মাছের দিন মিল পছন্দ</h3>
+                            <div className="space-y-3">
+                                {[
+                                    { id: 'normal', label: 'সাধারণ', desc: 'মাছ থাকলেও মিল চলবে', icon: '🐟' },
+                                    { id: 'egg', label: 'ডিম', desc: 'মাছের বদলে ডিম খাব', icon: '🥚' },
+                                    { id: 'autoOff', label: 'অটো অফ', desc: 'মাছের দিন মিল অটো অফ', icon: '🚫' }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => updateFishPreference(opt.id)}
+                                        className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
+                                            currentUser.fishPreference === opt.id
+                                                ? 'bg-emerald-500/20 border-2 border-emerald-500'
+                                                : 'bg-slate-900/50 border-2 border-transparent hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <span className="text-2xl">{opt.icon}</span>
+                                        <div className="text-left flex-1">
+                                            <p className="text-white font-medium">{opt.label}</p>
+                                            <p className="text-slate-400 text-sm">{opt.desc}</p>
+                                        </div>
+                                        {currentUser.fishPreference === opt.id && (
+                                            <span className="text-emerald-400 text-xl">✓</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+}
+
+// ==================== মোডাল কম্পোনেন্টস ====================
+function UserModal({ onClose, onSave }) {
+    const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
+
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-white mb-6">নতুন ইউজার তৈরি</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">নাম</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="পুরো নাম"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">ইউজারনেম</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="ইউজারনেম"
+                        />
+                    </div>
+                    <p className="text-slate-500 text-sm">ডিফল্ট পাসওয়ার্ড: 123456</p>
+                </div>
+                <div className="flex gap-3 mt-6">
+                    <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
+                        বাতিল
+                    </button>
+                    <button
+                        onClick={() => name && username && onSave({ name, username })}
+                        className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl"
+                    >
+                        তৈরি করুন
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function MenuModal({ onClose, onSave }) {
-  const [date, setDate] = useState('');
-  const [menu, setMenu] = useState('মাংস');
-  const [description, setDescription] = useState('');
+    const [date, setDate] = useState('');
+    const [menu, setMenu] = useState('মাংস');
+    const [description, setDescription] = useState('');
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-white mb-6">মেনু যোগ করুন</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">তারিখ</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">মেনু</label>
-            <select
-              value={menu}
-              onChange={(e) => setMenu(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-            >
-              <option value="মাছ">🐟 মাছ</option>
-              <option value="মাংস">🍖 মাংস</option>
-              <option value="ডিম">🥚 ডিম</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">বিবরণ</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="যেমন: রুই মাছের ঝোল"
-            />
-          </div>
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-white mb-6">মেনু যোগ করুন</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">তারিখ</label>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">মেনু</label>
+                        <select
+                            value={menu}
+                            onChange={(e) => setMenu(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                        >
+                            <option value="মাছ">🐟 মাছ</option>
+                            <option value="মাংস">🍖 মাংস</option>
+                            <option value="ডিম">🥚 ডিম</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">বিবরণ</label>
+                        <input
+                            type="text"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="যেমন: রুই মাছের ঝোল"
+                        />
+                    </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                    <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
+                        বাতিল
+                    </button>
+                    <button
+                        onClick={() => date && onSave({ date, menu, description })}
+                        className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl"
+                    >
+                        যোগ করুন
+                    </button>
+                </div>
+            </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
-            বাতিল
-          </button>
-          <button 
-            onClick={() => onSave({ date, menu, description })}
-            className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl"
-          >
-            যোগ করুন
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function ExpenseModal({ onClose, onSave }) {
-  const [item, setItem] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
-  const [isOffice, setIsOffice] = useState(false);
-  const [type, setType] = useState('daily');
+    const [item, setItem] = useState('');
+    const [quantity, setQuantity] = useState('');
+    const [price, setPrice] = useState('');
+    const [isOffice, setIsOffice] = useState(false);
+    const [type, setType] = useState('daily');
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-white mb-6">খরচ এন্ট্রি</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">আইটেম</label>
-            <input
-              type="text"
-              value={item}
-              onChange={(e) => setItem(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="যেমন: চাল, মাছ"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">পরিমাণ</label>
-            <input
-              type="text"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="যেমন: ২ কেজি"
-            />
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">দাম (টাকা)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="১০০"
-            />
-          </div>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-slate-300">
-              <input
-                type="checkbox"
-                checked={isOffice}
-                onChange={(e) => setIsOffice(e.target.checked)}
-                className="w-5 h-5 rounded"
-              />
-              অফিস খরচ
-            </label>
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">ধরন</label>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setType('daily')}
-                className={`flex-1 py-2 rounded-xl ${type === 'daily' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-              >
-                দৈনিক
-              </button>
-              <button
-                onClick={() => setType('monthly')}
-                className={`flex-1 py-2 rounded-xl ${type === 'monthly' ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-              >
-                মাসিক
-              </button>
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-white mb-6">খরচ এন্ট্রি</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">আইটেম</label>
+                        <input
+                            type="text"
+                            value={item}
+                            onChange={(e) => setItem(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="যেমন: চাল, মাছ"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">পরিমাণ</label>
+                        <input
+                            type="text"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="যেমন: ২ কেজি"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">দাম (টাকা)</label>
+                        <input
+                            type="number"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                            placeholder="১০০"
+                        />
+                    </div>
+                    <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={isOffice}
+                            onChange={(e) => setIsOffice(e.target.checked)}
+                            className="w-5 h-5 rounded"
+                        />
+                        অফিস খরচ
+                    </label>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">ধরন</label>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setType('daily')}
+                                className={`flex-1 py-2 rounded-xl ${
+                                    type === 'daily' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'
+                                }`}
+                            >
+                                দৈনিক
+                            </button>
+                            <button
+                                onClick={() => setType('monthly')}
+                                className={`flex-1 py-2 rounded-xl ${
+                                    type === 'monthly' ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-400'
+                                }`}
+                            >
+                                মাসিক
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                    <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
+                        বাতিল
+                    </button>
+                    <button
+                        onClick={() => item && price && onSave({ item, quantity, price: Number(price), isOffice, type })}
+                        className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl"
+                    >
+                        যোগ করুন
+                    </button>
+                </div>
             </div>
-          </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700">
-            বাতিল
-          </button>
-          <button 
-            onClick={() => onSave({ item, quantity, price: Number(price), isOffice, type })}
-            className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl"
-          >
-            যোগ করুন
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
+
+// ==================== রেন্ডার ====================
+ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
