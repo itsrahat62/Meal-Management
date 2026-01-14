@@ -1,12 +1,18 @@
 // ==================== মেইন অ্যাপ ====================
 function App() {
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUserState] = useState(() => db.getCurrentUser());
     const [users, setUsers] = useState(() => getStoredData('meal_users', initialUsers));
     const [menuSchedule, setMenuSchedule] = useState(() => getStoredData('meal_menu', initialMenuSchedule));
     const [expenses, setExpenses] = useState(() => getStoredData('meal_expenses', []));
     const [mealStatus, setMealStatus] = useState(() => getStoredData('meal_status', {}));
     const [isMealLocked, setIsMealLocked] = useState(() => getStoredData('meal_locked', false));
     const today = new Date().toISOString().split('T')[0];
+
+    // setCurrentUser wrapper - ডাটাবেসে সংরক্ষণ সহ
+    const setCurrentUser = (user) => {
+        setCurrentUserState(user);
+        db.saveCurrentUser(user);
+    };
 
     // লোকাল স্টোরেজে সেভ করা
     useEffect(() => { localStorage.setItem('meal_users', JSON.stringify(users)); }, [users]);

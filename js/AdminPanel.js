@@ -18,7 +18,8 @@ function AdminPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule
         { id: 'users', label: 'ইউজার', icon: '👥' },
         { id: 'menu', label: 'মেনু', icon: '📅' },
         { id: 'expenses', label: 'খরচ', icon: '💰' },
-        { id: 'reports', label: 'রিপোর্ট', icon: '📈' }
+        { id: 'reports', label: 'রিপোর্ট', icon: '📈' },
+        { id: 'settings', label: 'সেটিংস', icon: '⚙️' }
     ];
 
     const regularUsers = users.filter(u => u.role === 'user');
@@ -190,6 +191,14 @@ function AdminPanel({ currentUser, setCurrentUser, users, setUsers, menuSchedule
                         stats={stats}
                         expenses={expenses}
                         totalExpense={totalExpense}
+                    />
+                )}
+
+                {/* সেটিংস ট্যাব */}
+                {activeTab === 'settings' && (
+                    <SettingsTab 
+                        currentUser={currentUser}
+                        showToast={showToast}
                     />
                 )}
             </div>
@@ -571,6 +580,140 @@ function ReportsTab({ regularUsers, stats, expenses, totalExpense }) {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+// ==================== সেটিংস ট্যাব ====================
+function SettingsTab({ currentUser, showToast }) {
+    const [adminSettings, setAdminSettings] = useState(() => db.getAdminSettings());
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSaveSettings = () => {
+        setIsSaving(true);
+        const updatedSettings = db.updateAdminProfile(adminSettings);
+        setAdminSettings(updatedSettings);
+        setTimeout(() => {
+            setIsSaving(false);
+            showToast('✅ সেটিংস সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+        }, 500);
+    };
+
+    return (
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">⚙️ অ্যাডমিন সেটিংস</h2>
+
+            {/* অ্যাডমিন প্রোফাইল */}
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-white mb-6">👤 অ্যাডমিন প্রোফাইল</h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">নাম</label>
+                        <input
+                            type="text"
+                            value={adminSettings.adminName}
+                            onChange={(e) => setAdminSettings({...adminSettings, adminName: e.target.value})}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                            placeholder="অ্যাডমিনের নাম"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">ইউজারনেম</label>
+                        <input
+                            type="text"
+                            value={adminSettings.adminUsername}
+                            onChange={(e) => setAdminSettings({...adminSettings, adminUsername: e.target.value})}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                            placeholder="লগইন ইউজারনেম"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">ফোন নম্বর</label>
+                        <input
+                            type="tel"
+                            value={adminSettings.adminPhone}
+                            onChange={(e) => setAdminSettings({...adminSettings, adminPhone: e.target.value})}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                            placeholder="০১..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm mb-2">ইমেইল</label>
+                        <input
+                            type="email"
+                            value={adminSettings.adminEmail}
+                            onChange={(e) => setAdminSettings({...adminSettings, adminEmail: e.target.value})}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                            placeholder="admin@example.com"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* হোস্টেল সেটিংস */}
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-white mb-6">🏢 হোস্টেল সেটিংস</h3>
+                
+                <div>
+                    <label className="block text-slate-400 text-sm mb-2">হোস্টেলের নাম</label>
+                    <input
+                        type="text"
+                        value={adminSettings.hostelName}
+                        onChange={(e) => setAdminSettings({...adminSettings, hostelName: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                        placeholder="ছাত্রাবাসের নাম"
+                    />
+                </div>
+            </div>
+
+            {/* অটোমেশন সেটিংস */}
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-white mb-6">🤖 অটোমেশন</h3>
+                
+                <div>
+                    <label className="block text-slate-400 text-sm mb-2">দৈনিক মিল লক টাইম</label>
+                    <input
+                        type="time"
+                        value={adminSettings.autoLockTime}
+                        onChange={(e) => setAdminSettings({...adminSettings, autoLockTime: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                    />
+                    <p className="text-slate-400 text-xs mt-2">এই সময়ের পর মিল লক হবে</p>
+                </div>
+
+                <div className="space-y-2 pt-4 border-t border-slate-600">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={adminSettings.notificationEnabled}
+                            onChange={(e) => setAdminSettings({...adminSettings, notificationEnabled: e.target.checked})}
+                            className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-white">🔔 নোটিফিকেশন সক্রিয় করুন</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={adminSettings.dailyReportEmail}
+                            onChange={(e) => setAdminSettings({...adminSettings, dailyReportEmail: e.target.checked})}
+                            className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-white">📧 দৈনিক রিপোর্ট ইমেইল</span>
+                    </label>
+                </div>
+            </div>
+
+            {/* সেভ বাটন */}
+            <div className="flex gap-3">
+                <button
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+                >
+                    {isSaving ? '⏳ সংরক্ষণ করছে...' : '💾 সেটিংস সংরক্ষণ করুন'}
+                </button>
             </div>
         </div>
     );
